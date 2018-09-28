@@ -7,6 +7,7 @@ from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
 
+
 class Article(object):
     def __init__(self, title, link):
         self.title = title
@@ -44,7 +45,7 @@ class SingleDay(object):
             for i in pageList:
                 s = str(i.contents)
                 title = s.split('"')[1].strip()
-                for s in keywords+subkeywords:
+                for s in keywords + subkeywords:
                     if s in title:
                         link = urljoin(self.main_url, i.get('href'))
                         article = Article(title, link)
@@ -58,18 +59,18 @@ class SingleDay(object):
                         article.date = ''.join(result.div.text.split())
 
                         paragraph = result.find(id='ozoom').find_all('p')
-                        article.content = [c.text for c in paragraph]
+                        # article.content = (c.text for c in paragraph if len(c.text.rstrip())!=0)
+                        article.content = (c.text for c in paragraph)
 
                         self.articles.append(article)
                         break
-
 
     def write_to_docx(self):
 
         for i in self.articles:
             filename = i.category + '.docx'
             self.document = Document(filename)
-            if "New Title" not in  self.document.styles:
+            if "New Title" not in self.document.styles:
                 styles = self.document.styles
                 new_heading_style = styles.add_style('New Title', WD_STYLE_TYPE.PARAGRAPH)
                 new_heading_style.base_style = styles['Title']
@@ -77,24 +78,22 @@ class SingleDay(object):
                 font.name = '宋体'
                 font.size = Pt(18)
 
-                #style: title:小二 宋体  paragrapth:三号 仿宋
+                # style: title:小二 宋体  paragrapth:三号 仿宋
             self.document.styles['Normal'].font.name = u'仿宋'
 
             self.document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), u'仿宋')
             self.document.styles['New Title']._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
 
-            self.document.styles['Normal'].font.size=Pt(16)
+            self.document.styles['Normal'].font.size = Pt(16)
 
-
-
-            head=self.document.add_paragraph(i.title,style="New Title")
+            head = self.document.add_paragraph(i.title, style="New Title")
             head.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            author=self.document.add_paragraph(i.author)
+            author = self.document.add_paragraph(i.author)
 
             author.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            date=self.document.add_paragraph(i.date)
+            date = self.document.add_paragraph(i.date)
             date.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
             for p in i.content:
                 self.document.add_paragraph(p)
@@ -106,18 +105,17 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
     keywords = config['DEFAULT']['Keywords'].split(',')
-    subkeywords=config['DEFAULT']['SubKeywords'].split(',')
+    subkeywords = config['DEFAULT']['SubKeywords'].split(',')
     period = {'year': config['DEFAULT']['Year'], 'month': config['DEFAULT']['Month'],
               'start': config['DEFAULT']['StartDay'], 'end': config['DEFAULT']['EndDay']}
 
     base_url = "http://paper.people.com.cn/rmrb/html/{year}-{month}/{day}/nbs.D110000renmrb_01.htm"
 
-
-    for i in keywords+ ["集锦"]:
+    for i in keywords + ["集锦"]:
         doc = Document()
         doc.save(i + '.docx')
 
-    for i in range(int(period['start']),int(period['end'])+1):
+    for i in range(int(period['start']), int(period['end']) + 1):
         main_url = base_url.format(year=period['year'], month=period['month'].zfill(2), day="%02d" % i)
         s = SingleDay(main_url)
         s.get_urls('.right_title-name a')
